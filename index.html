@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>3D Multiplayer Maze · Three.js + PeerJS</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* improve touch handling */
         }
         #info {
             position: absolute;
@@ -38,6 +39,7 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.5);
             border: 1px solid #444;
             min-width: 260px;
+            max-width: 350px;
         }
         #controls h3 {
             margin: 0 0 15px 0;
@@ -107,6 +109,7 @@
             box-shadow: 0 4px 0 #aa6f00;
             border: 1px solid #ffcc66;
             letter-spacing: 0.5px;
+            touch-action: manipulation;
         }
         button:hover {
             background: #ffbb22;
@@ -158,19 +161,45 @@
             z-index: 5;
             box-shadow: 0 0 10px #000;
         }
-    </style>
-    <!-- Three.js and PeerJS from CDN -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/",
-                "peerjs": "https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"
-            }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 20px 40px;
+            border-radius: 40px;
+            font-size: 20px;
+            z-index: 100;
+            backdrop-filter: blur(5px);
         }
-    </script>
+        #error-message {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            right: 20px;
+            background: rgba(200,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 20px;
+            z-index: 200;
+            display: none;
+            text-align: center;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+    <!-- Three.js core and addons from CDN (global) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- PointerLockControls and CSS2DRenderer as global from examples -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+    <!-- PeerJS client library -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 </head>
 <body>
+    <div id="loading">🎮 Loading Maze...</div>
+    <div id="error-message"></div>
     <div id="info">
         <span id="connection-status"></span>
         <span id="player-count">Players: 1</span>
@@ -179,7 +208,7 @@
     <div id="crosshair"></div>
     <div id="instructions">
         <strong>WASD</strong> move · <strong>MOUSE</strong> look<br>
-        <strong>Click</strong> to lock pointer · <strong>ESC</strong> to unlock
+        <strong>Click/Tap</strong> to lock · <strong>ESC</strong> unlock
     </div>
     <div id="controls">
         <h3>🌐 MULTIPLAYER (P2P)</h3>
@@ -187,7 +216,7 @@
             <span style="color:#aaa;">Your ID:</span> <span id="my-peer-id">Connecting...</span>
         </div>
         <div class="input-group">
-            <input type="text" id="remote-id-input" placeholder="Friend's Peer ID" spellcheck="false">
+            <input type="text" id="remote-id-input" placeholder="Friend's Peer ID" spellcheck="false" enterkeyhint="done">
             <button id="connect-btn">Connect</button>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -197,21 +226,28 @@
         <div id="status-text">✨ Ready. Share your ID to play together.</div>
     </div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+    <script>
+        // --- Global error display ---
+        function showError(msg) {
+            const errDiv = document.getElementById('error-message');
+            errDiv.style.display = 'block';
+            errDiv.textContent = '⚠️ ' + msg;
+            console.error(msg);
+        }
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
 
-        // --- Initialize PeerJS (free cloud server) ---
-        // Using PeerJS cloud signaling server (free)
-        const peer = new Peer({
-            host: '0.peerjs.com',
-            port: 443,
-            secure: true,
-            debug: 1
-        });
+        // --- Check for required globals ---
+        if (typeof THREE === 'undefined') {
+            showError('Three.js failed to load. Please check your connection.');
+            throw new Error('Three.js not loaded');
+        }
+        if (typeof Peer === 'undefined') {
+            showError('PeerJS failed to load. Multiplayer may not work.');
+        }
 
-        // --- Game state ---
+        // --- Initialize scene ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x111122);
         
@@ -225,21 +261,28 @@
         document.body.appendChild(renderer.domElement);
         
         // CSS2 Renderer for name labels
-        const labelRenderer = new CSS2DRenderer();
+        const labelRenderer = new THREE.CSS2DRenderer();
         labelRenderer.setSize(window.innerWidth, window.innerHeight);
         labelRenderer.domElement.style.position = 'absolute';
         labelRenderer.domElement.style.top = '0px';
         labelRenderer.domElement.style.left = '0px';
-        labelRenderer.domElement.style.pointerEvents = 'none';  // allow clicking through labels
+        labelRenderer.domElement.style.pointerEvents = 'none';
         document.body.appendChild(labelRenderer.domElement);
 
-        // Controls
-        const controls = new PointerLockControls(camera, document.body);
+        // Controls (PointerLockControls expects THREE as global)
+        const controls = new THREE.PointerLockControls(camera, document.body);
         
-        // Click to lock
+        // Request pointer lock on click/tap
         document.body.addEventListener('click', () => {
             controls.lock();
         });
+        // For touch devices, we need to handle explicitly
+        document.body.addEventListener('touchstart', (e) => {
+            // Only if not interacting with UI
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+                controls.lock();
+            }
+        }, { passive: false });
         
         controls.addEventListener('lock', () => {
             document.getElementById('instructions').style.opacity = '0.5';
@@ -276,15 +319,12 @@
         backLight.position.set(0, 3, -8);
         scene.add(backLight);
 
-        // --- Maze Generation (grid-based, cell size = 2 units) ---
-        const mazeWidth = 11;  // odd for outer walls
+        // --- Maze Generation ---
+        const mazeWidth = 11;
         const mazeHeight = 11;
         const cellSize = 2.0;
         const wallHeight = 2.5;
-        const wallThickness = 0.4;
         
-        // Simple predefined maze (1 = wall, 0 = path)
-        // Generated manually to ensure playable area
         const mazeGrid = [
             [1,1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,1,0,0,0,0,0,1],
@@ -300,23 +340,14 @@
         ];
         
         const walls = [];
-        const wallMeshes = [];
         
         function buildMaze() {
-            const wallMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x8a9bb0, 
-                roughness: 0.6,
-                metalness: 0.1,
-                emissive: new THREE.Color(0x111122)
-            });
-            const wallMaterialDark = new THREE.MeshStandardMaterial({ 
-                color: 0x6b7b8f, 
-                roughness: 0.7 
-            });
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x8a9bb0, roughness: 0.6 });
+            const wallMaterialDark = new THREE.MeshStandardMaterial({ color: 0x6b7b8f, roughness: 0.7 });
             
             // Floor
             const floorGeo = new THREE.PlaneGeometry(mazeWidth * cellSize, mazeHeight * cellSize);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a3a4a, roughness: 0.8, metalness: 0.1 });
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a3a4a, roughness: 0.8 });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
             floor.position.y = 0;
@@ -325,7 +356,6 @@
             floor.receiveShadow = true;
             scene.add(floor);
             
-            // Add grid lines for style
             const gridHelper = new THREE.GridHelper(mazeWidth * cellSize, mazeWidth, 0x99aacc, 0x445566);
             gridHelper.position.x = (mazeWidth-1) * cellSize / 2;
             gridHelper.position.z = (mazeHeight-1) * cellSize / 2;
@@ -345,8 +375,6 @@
                         mesh.receiveShadow = true;
                         scene.add(mesh);
                         
-                        wallMeshes.push(mesh);
-                        // Store bounding box for collision
                         walls.push({
                             min: new THREE.Vector3(x - cellSize/2, 0, z - cellSize/2),
                             max: new THREE.Vector3(x + cellSize/2, wallHeight, z + cellSize/2)
@@ -354,30 +382,15 @@
                     }
                 }
             }
-            
-            // Add some ceiling lights / decorations
-            const lightPoleMat = new THREE.MeshStandardMaterial({ color: 0xccaadd, emissive: new THREE.Color(0x332244) });
-            for (let i = 1; i < mazeWidth-1; i+=2) {
-                for (let j = 1; j < mazeHeight-1; j+=2) {
-                    if (mazeGrid[j][i] === 0) {
-                        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.5), lightPoleMat);
-                        pole.position.set(i*cellSize, wallHeight+0.3, j*cellSize);
-                        scene.add(pole);
-                    }
-                }
-            }
         }
         buildMaze();
 
-        // --- Player representation (local) ---
+        // --- Player collision ---
         const playerRadius = 0.5;
         const playerHeight = 1.8;
         const playerSpeed = 5.0;
         
-        // Movement state
         const moveState = { forward: false, backward: false, left: false, right: false };
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
         
         document.addEventListener('keydown', (e) => {
             switch(e.code) {
@@ -396,7 +409,6 @@
             }
         });
 
-        // Simple collision detection (AABB)
         function checkCollision(newPos) {
             const playerBox = {
                 min: new THREE.Vector3(newPos.x - playerRadius, newPos.y, newPos.z - playerRadius),
@@ -406,26 +418,32 @@
                 if (playerBox.max.x <= wall.min.x || playerBox.min.x >= wall.max.x) continue;
                 if (playerBox.max.y <= wall.min.y || playerBox.min.y >= wall.max.y) continue;
                 if (playerBox.max.z <= wall.min.z || playerBox.min.z >= wall.max.z) continue;
-                return true; // collision
+                return true;
             }
             return false;
         }
 
-        // --- Multiplayer data ---
-        const remotePlayers = new Map(); // peerId -> { mesh, label, lastUpdate }
-        const connections = new Map(); // peerId -> dataConnection
-        
+        // --- Multiplayer with PeerJS ---
         let myPeerId = null;
+        const remotePlayers = new Map();
+        const connections = new Map();
+        
         const playerCountSpan = document.getElementById('player-count');
         const statusText = document.getElementById('status-text');
         const connectionStatus = document.getElementById('connection-status');
         
-        // Create a simple player mesh for remote players
+        const peer = new Peer({
+            host: '0.peerjs.com',
+            port: 443,
+            secure: true,
+            debug: 1
+        });
+
         function createRemotePlayerMesh(color = 0xff5533) {
             const group = new THREE.Group();
             
             const bodyGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.8);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             body.position.y = 0.9;
             body.castShadow = true;
@@ -439,7 +457,6 @@
             head.castShadow = true;
             group.add(head);
             
-            // Eyes
             const eyeGeo = new THREE.SphereGeometry(0.08);
             const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
             const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
@@ -465,20 +482,19 @@
             div.style.backdropFilter = 'blur(4px)';
             div.style.border = '1px solid #aaccff';
             div.style.pointerEvents = 'none';
-            return new CSS2DObject(div);
+            return new THREE.CSS2DObject(div);
         }
 
-        // Update UI player count
         function updatePlayerCount() {
             playerCountSpan.textContent = `Players: ${remotePlayers.size + 1}`;
         }
 
-        // --- PeerJS event handlers ---
         peer.on('open', (id) => {
             myPeerId = id;
             document.getElementById('my-peer-id').textContent = id;
-            statusText.textContent = '✅ Connected to signaling. Share your ID!';
+            statusText.textContent = '✅ Connected. Share your ID!';
             connectionStatus.className = 'connected';
+            hideLoading();
         });
         
         peer.on('connection', (conn) => {
@@ -489,20 +505,19 @@
             console.error('Peer error:', err);
             statusText.textContent = '⚠️ Peer error: ' + err.type;
             connectionStatus.className = '';
+            hideLoading();
         });
         
         peer.on('disconnected', () => {
-            statusText.textContent = '⚠️ Disconnected from server. Reconnecting...';
+            statusText.textContent = '⚠️ Disconnected. Reconnecting...';
             connectionStatus.className = '';
             setTimeout(() => peer.reconnect(), 1000);
         });
 
         function setupConnection(conn) {
             conn.on('open', () => {
-                console.log('Connection opened with', conn.peer);
                 connections.set(conn.peer, conn);
                 
-                // Create remote player representation
                 const color = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
                 const mesh = createRemotePlayerMesh(color);
                 scene.add(mesh);
@@ -515,7 +530,6 @@
                 updatePlayerCount();
                 statusText.textContent = `🔗 Connected to ${conn.peer.slice(0,6)}`;
                 
-                // Send initial position
                 broadcastPosition();
             });
             
@@ -531,7 +545,6 @@
             });
             
             conn.on('close', () => {
-                console.log('Connection closed', conn.peer);
                 const player = remotePlayers.get(conn.peer);
                 if (player) {
                     scene.remove(player.mesh);
@@ -539,83 +552,60 @@
                 }
                 connections.delete(conn.peer);
                 updatePlayerCount();
-                statusText.textContent = `👋 Peer disconnected: ${conn.peer.slice(0,6)}`;
-            });
-            
-            conn.on('error', (err) => {
-                console.warn('Connection error:', err);
+                statusText.textContent = `👋 Peer disconnected`;
             });
         }
 
         function broadcastPosition() {
             if (!controls.isLocked) return;
-            
             const pos = camera.position;
             const rotY = camera.rotation.y;
-            
-            const data = {
-                type: 'position',
-                x: pos.x,
-                y: pos.y,
-                z: pos.z,
-                rotY: rotY
-            };
-            
+            const data = { type: 'position', x: pos.x, y: pos.y, z: pos.z, rotY: rotY };
             connections.forEach((conn) => {
-                if (conn.open) {
-                    conn.send(data);
-                }
+                if (conn.open) conn.send(data);
             });
         }
 
-        // Connect to remote peer
         function connectToPeer(remoteId) {
             if (!remoteId || remoteId === myPeerId) {
                 statusText.textContent = '❌ Invalid ID';
                 return;
             }
             if (connections.has(remoteId)) {
-                statusText.textContent = 'Already connected to this peer';
+                statusText.textContent = 'Already connected';
                 return;
             }
-            
-            statusText.textContent = `⏳ Connecting to ${remoteId.slice(0,8)}...`;
+            statusText.textContent = `⏳ Connecting...`;
             const conn = peer.connect(remoteId, { reliable: true });
             setupConnection(conn);
         }
 
-        // --- UI event listeners ---
+        // UI events
         document.getElementById('connect-btn').addEventListener('click', () => {
-            const input = document.getElementById('remote-id-input');
-            connectToPeer(input.value.trim());
+            connectToPeer(document.getElementById('remote-id-input').value.trim());
         });
-        
         document.getElementById('host-btn').addEventListener('click', () => {
-            // Disconnect and get new ID
             peer.disconnect();
             peer.reconnect();
             statusText.textContent = '🔄 Requesting new ID...';
         });
-        
         document.getElementById('copy-id-btn').addEventListener('click', () => {
             if (myPeerId) {
                 navigator.clipboard?.writeText(myPeerId).then(() => {
-                    statusText.textContent = '📋 ID copied to clipboard!';
+                    statusText.textContent = '📋 ID copied!';
                 }).catch(() => {
-                    prompt('Copy your ID manually:', myPeerId);
+                    prompt('Copy manually:', myPeerId);
                 });
             }
         });
 
-        // Start broadcasting at interval
         setInterval(broadcastPosition, 50);
         
-        // Cleanup stale remote players (optional)
+        // Cleanup stale players
         setInterval(() => {
             const now = Date.now();
             remotePlayers.forEach((player, id) => {
                 if (now - player.lastUpdate > 5000) {
-                    // Consider disconnected if no update for 5s
                     scene.remove(player.mesh);
                     remotePlayers.delete(id);
                     connections.delete(id);
@@ -624,59 +614,35 @@
             });
         }, 2000);
 
-        // --- Animation loop ---
+        // --- Animation ---
         const clock = new THREE.Clock();
         
         function animate() {
             const delta = Math.min(clock.getDelta(), 0.1);
             
             if (controls.isLocked) {
-                // Movement
-                velocity.x = 0;
-                velocity.z = 0;
-                
-                direction.z = Number(moveState.forward) - Number(moveState.backward);
-                direction.x = Number(moveState.right) - Number(moveState.left);
-                direction.normalize();
-                
                 const speed = playerSpeed * delta;
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                forward.y = 0; forward.normalize();
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                right.y = 0; right.normalize();
                 
-                if (direction.z !== 0) {
-                    velocity.z = direction.z * speed;
-                }
-                if (direction.x !== 0) {
-                    velocity.x = direction.x * speed;
-                }
+                let moveX = 0, moveZ = 0;
+                if (moveState.forward) moveZ -= speed;
+                if (moveState.backward) moveZ += speed;
+                if (moveState.right) moveX += speed;
+                if (moveState.left) moveX -= speed;
                 
-                // Apply movement with collision
-                if (velocity.x !== 0 || velocity.z !== 0) {
-                    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                    forward.y = 0;
-                    forward.normalize();
-                    
-                    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                    right.y = 0;
-                    right.normalize();
-                    
-                    const moveDelta = new THREE.Vector3();
-                    moveDelta.addScaledVector(forward, velocity.z);
-                    moveDelta.addScaledVector(right, velocity.x);
-                    
-                    // Check X and Z separately for smoother wall sliding
+                if (moveX !== 0 || moveZ !== 0) {
                     const newPosX = camera.position.clone();
-                    newPosX.x += moveDelta.x;
-                    if (!checkCollision(newPosX)) {
-                        camera.position.x = newPosX.x;
-                    }
+                    newPosX.x += right.x * moveX + forward.x * moveZ;
+                    if (!checkCollision(newPosX)) camera.position.x = newPosX.x;
                     
                     const newPosZ = camera.position.clone();
-                    newPosZ.z += moveDelta.z;
-                    if (!checkCollision(newPosZ)) {
-                        camera.position.z = newPosZ.z;
-                    }
+                    newPosZ.z += right.z * moveX + forward.z * moveZ;
+                    if (!checkCollision(newPosZ)) camera.position.z = newPosZ.z;
                 }
                 
-                // Keep within maze bounds roughly
                 const bound = (mazeWidth-1) * cellSize / 2;
                 camera.position.x = Math.max(playerRadius, Math.min(bound*2 - playerRadius, camera.position.x));
                 camera.position.z = Math.max(playerRadius, Math.min(bound*2 - playerRadius, camera.position.z));
@@ -684,25 +650,25 @@
             
             renderer.render(scene, camera);
             labelRenderer.render(scene, camera);
-            
             requestAnimationFrame(animate);
         }
         
         animate();
 
-        // --- Window resize ---
-        window.addEventListener('resize', onWindowResize, false);
-        function onWindowResize() {
+        window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             labelRenderer.setSize(window.innerWidth, window.innerHeight);
-        }
+        });
 
-        // Initial position
-        camera.position.set(2, 1.6, 5);
-        
-        console.log('🎮 3D Multiplayer Maze - Share your Peer ID to play together!');
+        // Fallback: if after 3 seconds still loading, show message
+        setTimeout(() => {
+            if (!myPeerId) {
+                hideLoading();
+                statusText.textContent = '⚠️ Peer connection slow. Check network.';
+            }
+        }, 3000);
     </script>
 </body>
 </html>
