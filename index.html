@@ -1,683 +1,359 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Roblox Generator • Broke Edition</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', 'Poppins', system-ui, -apple-system, 'Inter', sans-serif;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robux Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      min-height: 100vh;
-      background: linear-gradient(145deg, #0a0f1e 0%, #0c1222 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-      position: relative;
-    }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #0a0f1e, #0c1222);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle at 70% 20%, rgba(255, 100, 50, 0.08), transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
+        .container {
+            background: #111827;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 40px black;
+        }
 
-    .card {
-      max-width: 500px;
-      width: 100%;
-      background: rgba(18, 25, 45, 0.75);
-      backdrop-filter: blur(12px);
-      border-radius: 3rem;
-      border: 1px solid rgba(255, 100, 80, 0.3);
-      box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 120, 80, 0.15) inset;
-      overflow: hidden;
-      transition: all 0.3s ease;
-      z-index: 2;
-    }
+        h1 {
+            color: #ffaa66;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
 
-    .header {
-      background: rgba(30, 15, 20, 0.7);
-      padding: 1.8rem 2rem;
-      text-align: center;
-      border-bottom: 1px solid rgba(255, 100, 70, 0.4);
-    }
+        .subtitle {
+            color: #ffbb99;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
 
-    .header h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #FFFFFF, #ffaa66, #ff6b4a);
-      background-clip: text;
-      -webkit-background-clip: text;
-      color: transparent;
-      letter-spacing: -0.5px;
-      text-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
+        .question {
+            color: #ffd5b5;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 18px;
+        }
 
-    .header p {
-      color: #ffbb99;
-      margin-top: 0.5rem;
-      font-size: 0.85rem;
-      font-weight: 500;
-    }
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #1f2937;
+            border: 2px solid #374151;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
 
-    .step-container {
-      padding: 2.2rem 2rem 2.5rem;
-    }
+        input:focus {
+            outline: none;
+            border-color: #ff8c5a;
+        }
 
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      margin-bottom: 2rem;
-    }
+        .hint {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
 
-    .input-group label {
-      font-weight: 600;
-      color: #ffd5b5;
-      letter-spacing: 0.3px;
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+        button {
+            background: #8b4a2a;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
 
-    .robux-icon {
-      background: #ff884d20;
-      padding: 4px 8px;
-      border-radius: 40px;
-      font-size: 0.75rem;
-    }
+        button:hover {
+            background: #a85c34;
+        }
 
-    input {
-      width: 100%;
-      padding: 1rem 1.2rem;
-      background: #0f172f;
-      border: 1.5px solid #5a3a2a;
-      border-radius: 2rem;
-      font-size: 1.1rem;
-      color: white;
-      font-weight: 500;
-      transition: all 0.25s;
-      outline: none;
-    }
+        .reset-btn {
+            background: #374151;
+        }
 
-    input:focus {
-      border-color: #ff8c5a;
-      box-shadow: 0 0 0 3px rgba(255, 140, 90, 0.3);
-      background: #0b1127;
-    }
+        .reset-btn:hover {
+            background: #4b5563;
+        }
 
-    input::placeholder {
-      color: #6a4a3a;
-      font-weight: 400;
-      font-size: 0.9rem;
-    }
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
 
-    .action-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-top: 0.5rem;
-      justify-content: space-between;
-      align-items: center;
-    }
+        .error {
+            background: rgba(255, 80, 80, 0.1);
+            color: #ffa098;
+            border-left: 3px solid #ff6a4b;
+        }
 
-    button {
-      background: linear-gradient(95deg, #2a1f28, #1a121f);
-      border: none;
-      padding: 0.85rem 1.6rem;
-      border-radius: 3rem;
-      font-weight: bold;
-      font-size: 0.9rem;
-      color: #ffe0cc;
-      cursor: pointer;
-      transition: 0.2s;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border: 1px solid rgba(255, 120, 70, 0.4);
-    }
+        .success {
+            background: rgba(0, 255, 100, 0.05);
+            color: #a3ffc2;
+            border-left: 3px solid #4aff8d;
+        }
 
-    button.primary {
-      background: linear-gradient(95deg, #8b4a2a, #5e2e1a);
-      box-shadow: 0 6px 14px rgba(255, 100, 50, 0.25);
-      color: white;
-      border: none;
-    }
+        .info {
+            background: rgba(0, 0, 0, 0.4);
+            color: #ffcca5;
+            border-left: 3px solid #ff884d;
+        }
 
-    button.primary:hover {
-      background: linear-gradient(95deg, #a85c34, #7a3a20);
-      transform: scale(1.02);
-      box-shadow: 0 8px 20px rgba(255, 110, 60, 0.4);
-    }
+        .summary {
+            background: rgba(255, 100, 50, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #ffaa66;
+            font-size: 18px;
+        }
 
-    button:hover {
-      background: #3a2a2a;
-      border-color: #ff9a6a;
-    }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #374151;
+            color: #6b7280;
+            font-size: 12px;
+        }
 
-    .reset-btn {
-      background: rgba(255, 80, 80, 0.15);
-      border-color: rgba(255, 120, 120, 0.5);
-      color: #ffb7b7;
-    }
-
-    .reset-btn:hover {
-      background: rgba(255, 70, 70, 0.3);
-      color: white;
-    }
-
-    .message-area {
-      margin-top: 1.8rem;
-      padding: 1rem;
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 1.5rem;
-      text-align: center;
-      font-size: 0.85rem;
-      border-left: 3px solid #ff884d;
-      backdrop-filter: blur(4px);
-    }
-
-    .info-message {
-      color: #ffcca5;
-    }
-
-    .error-message {
-      color: #ffa098;
-      background: rgba(255, 80, 80, 0.1);
-      border-left-color: #ff6a4b;
-    }
-
-    .success-message {
-      color: #a3ffc2;
-      border-left-color: #4aff8d;
-      background: rgba(0, 255, 100, 0.05);
-    }
-
-    .robux-highlight {
-      font-weight: 800;
-      color: #ffaa66;
-      background: #2e1e1a;
-      display: inline-block;
-      padding: 0 8px;
-      border-radius: 40px;
-    }
-
-    footer {
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.7rem;
-      color: #aa7a5a;
-      border-top: 1px solid rgba(255,255,255,0.05);
-    }
-
-    @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .step-transition {
-      animation: fadeSlide 0.3s ease-out;
-    }
-
-    .error-shake {
-      animation: shakeInput 0.25s ease-in-out 0s 2;
-      border-color: #ff7760 !important;
-    }
-    
-    @keyframes shakeInput {
-      0% { transform: translateX(0); }
-      25% { transform: translateX(-5px); }
-      75% { transform: translateX(5px); }
-      100% { transform: translateX(0); }
-    }
-
-    @media (max-width: 500px) {
-      .step-container {
-        padding: 1.5rem;
-      }
-      button {
-        padding: 0.7rem 1.2rem;
-      }
-    }
-  </style>
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>ROBUX GENERATOR</h1>
+        <div class="subtitle">extremely limited funds • we're broke</div>
+        
+        <!-- Step 1: Ask for Robux -->
+        <div id="step1">
+            <div class="question">HOW MANY ROBUX DO YOU WANT?</div>
+            <input type="number" id="robuxInput" placeholder="Enter number (1-10)" min="1" max="10">
+            <div class="hint">⚠️ we're broke — only 1 to 10 robux available</div>
+            <button id="continueBtn">CONTINUE</button>
+            <button id="resetBtn" class="reset-btn">RESET</button>
+            <div id="errorMsg" class="message error hidden"></div>
+        </div>
+        
+        <!-- Step 2: Ask for Username -->
+        <div id="step2" class="hidden">
+            <div id="summary" class="summary"></div>
+            <div class="question">YOUR ROBLOX USERNAME</div>
+            <input type="text" id="usernameInput" placeholder="e.g., CoolBuilder123">
+            <div class="hint">3-20 characters • letters, numbers, underscores</div>
+            <button id="submitBtn">CONFIRM & PROCESS</button>
+            <button id="backBtn">BACK</button>
+            <button id="startOverBtn" class="reset-btn">START OVER</button>
+            <div id="resultMsg" class="message hidden"></div>
+        </div>
+        
+        <footer>balance: 10 robux total • don't be greedy</footer>
+    </div>
 
-<div class="card" id="appRoot">
-  <div class="header">
-    <h1>✦ BROBUX GENERATOR ✦</h1>
-    <p>extremely limited funds • we're broke</p>
-  </div>
-  <div class="step-container" id="stepContainer">
-    <!-- dynamic content injected here -->
-  </div>
-  <footer>
-    💸 balance: 10 robux total • don't be greedy
-  </footer>
-</div>
-
-<script>
-  (function() {
-    let currentStep = 'robux';
-    let storedRobux = '';
-    const stepContainer = document.getElementById('stepContainer');
-    
-    function validateRobuxAmountWithPrompt(rawValue) {
-      let cleaned = rawValue.trim();
-      if (cleaned === '') return null;
-      let numberValue = Number(cleaned);
-      if (isNaN(numberValue)) return null;
-      if (!Number.isInteger(numberValue)) return null;
-      
-      if (numberValue > 10) {
-        prompt("⚠️ we're broke only 1-10 robux pls ⚠️", "1-10 only");
-        return null;
-      }
-      
-      if (numberValue < 1) return null;
-      return numberValue;
-    }
-    
-    function validateUsername(username) {
-      const trimmed = username.trim();
-      if (trimmed.length === 0) return false;
-      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-      return usernameRegex.test(trimmed);
-    }
-    
-    function setMessage(type, text, containerElement) {
-      let msgDiv = containerElement.querySelector('.dynamic-message');
-      if (!msgDiv) {
-        msgDiv = document.createElement('div');
-        msgDiv.className = 'message-area dynamic-message';
-        const actionsWrapper = containerElement.querySelector('.action-buttons-wrapper');
-        if (actionsWrapper) {
-          actionsWrapper.after(msgDiv);
-        } else {
-          containerElement.appendChild(msgDiv);
-        }
-      }
-      msgDiv.classList.remove('info-message', 'error-message', 'success-message');
-      if (type === 'error') {
-        msgDiv.classList.add('error-message');
-      } else if (type === 'success') {
-        msgDiv.classList.add('success-message');
-      } else {
-        msgDiv.classList.add('info-message');
-      }
-      msgDiv.innerHTML = text;
-      msgDiv.style.display = 'block';
-      if (msgDiv._timeout) clearTimeout(msgDiv._timeout);
-      if (type !== 'error') {
-        msgDiv._timeout = setTimeout(() => {
-          if (msgDiv) msgDiv.style.display = 'none';
-        }, 4500);
-      }
-    }
-    
-    function clearMessage(containerElement) {
-      const msgDiv = containerElement.querySelector('.dynamic-message');
-      if (msgDiv) {
-        msgDiv.style.display = 'none';
-        if (msgDiv._timeout) clearTimeout(msgDiv._timeout);
-      }
-    }
-    
-    function shakeElement(el) {
-      if (!el) return;
-      el.classList.add('error-shake');
-      setTimeout(() => el.classList.remove('error-shake'), 400);
-    }
-    
-    function renderRobuxStep() {
-      stepContainer.innerHTML = '';
-      stepContainer.className = 'step-container step-transition';
-      
-      const wrapper = document.createElement('div');
-      
-      const inputGroup = document.createElement('div');
-      inputGroup.className = 'input-group';
-      inputGroup.innerHTML = `
-        <label>
-          <span class="robux-icon">💸</span> 
-          <span>HOW MANY ROBUX DO YOU WANT?</span>
-        </label>
-        <input type="number" id="robuxInput" placeholder="e.g., 5" min="1" max="10" step="1" autocomplete="off">
-        <div style="font-size: 0.75rem; color:#ffaa77; margin-top: 4px;">⚠️ we're broke — only 1 to 10 robux available</div>
-      `;
-      
-      const actionsWrapper = document.createElement('div');
-      actionsWrapper.className = 'action-buttons-wrapper';
-      const btnDiv = document.createElement('div');
-      btnDiv.className = 'action-buttons';
-      
-      const nextBtn = document.createElement('button');
-      nextBtn.className = 'primary';
-      nextBtn.innerHTML = '✨ CONTINUE →';
-      const resetBtn = document.createElement('button');
-      resetBtn.className = 'reset-btn';
-      resetBtn.innerHTML = '⟳ RESET';
-      
-      btnDiv.appendChild(nextBtn);
-      btnDiv.appendChild(resetBtn);
-      actionsWrapper.appendChild(btnDiv);
-      
-      wrapper.appendChild(inputGroup);
-      wrapper.appendChild(actionsWrapper);
-      stepContainer.appendChild(wrapper);
-      
-      const robuxInputElem = document.getElementById('robuxInput');
-      if (storedRobux) {
-        robuxInputElem.value = storedRobux;
-      }
-      setTimeout(() => robuxInputElem.focus(), 50);
-      
-      function handleNext() {
-        clearMessage(stepContainer);
-        const rawValue = robuxInputElem.value;
-        const validated = validateRobuxAmountWithPrompt(rawValue);
+    <script>
+        // Get elements
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const robuxInput = document.getElementById('robuxInput');
+        const continueBtn = document.getElementById('continueBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const summary = document.getElementById('summary');
+        const usernameInput = document.getElementById('usernameInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const backBtn = document.getElementById('backBtn');
+        const startOverBtn = document.getElementById('startOverBtn');
+        const resultMsg = document.getElementById('resultMsg');
         
-        if (validated === null) {
-          const numCheck = Number(rawValue);
-          if (!isNaN(numCheck) && Number.isInteger(numCheck) && numCheck > 10) {
-            setMessage('error', '❌ Robux amount cannot exceed 10. We\'re broke! Please choose 1–10.', stepContainer);
-          } 
-          else if (rawValue.trim() === "") {
-            setMessage('error', '❌ Please enter a Robux amount (1–10 only).', stepContainer);
-          }
-          else {
-            setMessage('error', '❌ Invalid amount. Only whole numbers from 1 to 10 are accepted.', stepContainer);
-          }
-          shakeElement(robuxInputElem);
-          return;
+        let selectedRobux = '';
+        
+        // Hide message function
+        function hideMessage(element) {
+            element.classList.add('hidden');
         }
         
-        storedRobux = validated.toString();
-        currentStep = 'account';
-        renderAccountStep();
-      }
-      
-      function handleReset() {
-        storedRobux = '';
-        robuxInputElem.value = '';
-        clearMessage(stepContainer);
-        setMessage('info', '✨ Reset complete. Remember: we only have 1–10 robux.', stepContainer);
-        robuxInputElem.focus();
-      }
-      
-      nextBtn.addEventListener('click', handleNext);
-      resetBtn.addEventListener('click', handleReset);
-      
-      robuxInputElem.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleNext();
-        }
-      });
-    }
-    
-    function renderAccountStep() {
-      stepContainer.innerHTML = '';
-      stepContainer.className = 'step-container step-transition';
-      
-      const wrapper = document.createElement('div');
-      
-      const      
-      const wrapper = document.createElement('div');
-      
-      const summaryDiv = document summaryDiv = document.createElement('.createElement('div');
-div');
-      summaryDiv.style      summaryDiv.style.background = 'rgba.background = 'rgba(255(255, , 100,100, 50 50, , 0.0.1)1)';
-     ';
-      summaryDiv summaryDiv.style.p.style.padding =adding = '0 '0.8.8rem rem 1rem';
-     1 summaryDivrem';
-      summaryDiv.style.borderRadius.style.borderRadius = ' = '1.1.5rem5rem';
-     ';
-      summaryDiv summaryDiv.style.m.style.marginBottomarginBottom = ' = '1.1.5rem5rem';
-     ';
-      summaryDiv summaryDiv.style.text.style.textAlign =Align = ' 'centercenter';
-     ';
-      summaryDiv summaryDiv.style.font.style.fontSize =Size = '0 '0.9.9rem';
-rem';
-      summaryDiv.style.border      summaryDiv.style.border = ' = '1px1px solid rgba solid rgba(255(255, 140, 80, 140, 80, , 0.0.3)3)';
-     ';
-      summaryDiv summaryDiv.innerHTML =.innerHTML = `
-        `
-        💸 💸 <strong <strong>REQUEST>REQUESTED:</ED:</strong>strong> 
- 
-               <span <span class=" class="robuxrobux-highlight-highlight">${">${storedstoredRobuxRobux} Rob} Robux</ux</span>
-span>
-               <span style <span style="="marginmargin-left:-left: 6 6px;">px;">🐣🐣 (we (we're're broke broke but ok but ok)</span)</span>
-     >
-      `;
- `;
-      wrapper      wrapper.appendChild(sum.appendChild(summaryDivmaryDiv);
-      
-);
-      
-      const      const inputGroup inputGroup = document = document.createElement('div');
-.createElement('div');
-      input      inputGroup.classGroup.className =Name = ' 'inputinput-group';
--group';
-      input      inputGroup.innerHTMLGroup.innerHTML = `
- = `
-               <label>
- <label>
-                   < <span>👤span>👤</span</span> 
-         > 
-          <span>Y <span>OUR ROBLOYOUR ROBLOX USERNAME</X USERspan>
-NAME</        </span>
-        </label>
-       label>
-        <input type <input type="text="text" id" id="username="usernameInput"Input" placeholder=" placeholder="e.ge.g., Cool., CoolBuilder123" autocomplete="off" spellcheck="false">
-        <divBuilder123" autocomplete="off" spellcheck="false">
-        <div style="font style="font-size-size: : 0.0.7rem7rem; color; color:#ffaa77:#ffaa77;">3;">3–20 characters •–20 characters • letters, numbers, letters, underscores</ numbers, underscores</div>
-     div>
- `;
-      
-      `;
-      const      
-      const actionsWrapper = document actionsWrapper = document.createElement('.createElement('div');
-div');
-      actionsWrapper.className =      actionsWrapper.className = 'action 'action-butt-buttons-wrapperons-wrapper';
-      const btnDiv = document.createElement';
-      const btn('divDiv = document.createElement('div');
-      btn');
-     Div btnDiv.className.className = ' = 'action-buttonsaction-buttons';
-      
-';
-      
-      const submitBtn      const submitBtn = document = document.createElement('button');
-.createElement('button');
-      submit      submitBtn.classNameBtn.className = = 'primary 'primary';
-     ';
-      submitBtn submitBtn.innerHTML =.innerHTML = '✅ '✅ CONFIR CONFIRM &M & PROCESS';
- PROCESS';
-      const      const backBtn backBtn = document = document.createElement('button');
-.createElement('button');
-      back      backBtn.innerHTML = 'Btn.innerHTML = '◀◀ BACK';
-      const BACK';
-      const resetAll resetAllBtn = documentBtn = document.createElement.createElement('button('button');
-     ');
-      resetAllBtn.class resetAllBtn.className =Name = 'reset-btn';
- 'reset-btn';
-      reset      resetAllBtn.innerHTML =AllBtn.innerHTML = ' '⟳ START OVER';
-⟳ START OVER';
-      
-           
-      btnDiv.appendChild btnDiv.appendChild(sub(submitBtnmitBtn);
-     );
-      btnDiv btn.appendChild(Div.appendChild(backBtnbackBtn);
-     );
-      btn btnDiv.appendChild(resDiv.appendChild(resetAlletAllBtn);
-Btn);
-      actions      actionsWrapper.appendChild(btnDivWrapper.appendChild(btnDiv);
-);
-      
-           
-      wrapper.appendChild wrapper.appendChild(inputGroup(inputGroup);
-     );
-      wrapper.appendChild wrapper.appendChild(actions(actionsWrapper);
-Wrapper);
-      step      stepContainerContainer.appendChild(wrapper.appendChild(wrapper);
-      
-);
-      
-      const      const usernameInput usernameInput = document = document.getElementById.getElementById('usernameInput('usernameInput');
-     ');
-      if (usernameInput if (usernameInput) username) usernameInput.focusInput.focus();
-();
-      
-           
-      function process function processFinal(usernameFinal(usernameRaw)Raw) {
-        {
-        clearMessage(step clearMessage(stepContainer);
-Container);
-               const trimmedUser const trimmedUser = username = usernameRaw.trim();
-       Raw.trim if (!();
-       validateUsername(trim if (!medUservalidateUsername(trim)) {
-medUser)) {
-          setMessage('          setMessage('error', '⚠error', '⚠️ Invalid️ Invalid Roblox username Roblox username. Use . Use 3-20 characters3- (A20 characters (A-Z, a-z-Z, a-z,, 0- 0-9, _).9, _). No spaces No spaces.', stepContainer);
-.', stepContainer);
-          if          if (username (usernameInput)Input) {
-            {
-            shakeElement(username shakeElement(usernameInputInput);
-         );
-          }
-          return false }
-          return false;
-       ;
+        // Show error function
+        function showError(element, message) {
+            element.innerHTML = message;
+            element.classList.remove('hidden');
+            setTimeout(function() {
+                element.classList.add('hidden');
+            }, 3000);
         }
         
- }
+        // Show success function
+        function showSuccess(element, message) {
+            element.innerHTML = message;
+            element.classList.remove('hidden');
+            element.classList.add('success');
+            setTimeout(function() {
+                element.classList.add('hidden');
+                element.classList.remove('success');
+            }, 5000);
+        }
         
-        const        finalRobux = const finalRobux = storedRob storedRobux;
-        setux;
-        setMessage('Message('success', `
-          🎉success', `
-          🎉 <strong> <strong>GENERATION COMPGENERATION COMPLETELETE (kinda)</ (kinda)</strongstrong><br>
-><br>
-          ${finalRob          ${finalRobux} Robux} Robux have beenux have been sent to sent to <strong>${ <strong>${escapeHtmlescapeHtml(trimmedUser(trimmedUser)}</)}</strong>.<strong>.<brbr>
-         >
-          💸 < 💸 <emem>Just>Just kidding, kidding, we're broke! we're broke! This is a simulation This is a simulation. But. But thanks for thanks for playing.</ playing.</em>
-em>
-        `        `, stepContainer);
-        
-       , stepContainer);
- submitBtn.disabled = true        
-        submitBtn.disabled = true;
-        submit;
-        submitBtnBtn.style.op.style.opacity =acity = '0 '0.6.6';
-       ';
-        submitBtn submitBtn.style.c.style.cursor =ursor = 'default 'default';
-       ';
-        return true return true;
-     ;
-      }
-      
- }
-      
-      function      function onSubmitAction onSubmitAction() {
-() {
-        if        if (submitBtn.dis (submitBtn.disabled ===abled === true) true) return;
- return;
-               const val = const val = usernameInput usernameInput ? username ? usernameInput.valueInput.value : '';
- : '';
-        process        processFinal(valFinal(val);
-     );
-      }
-      
- }
-      
-      submit      submitBtn.addEventListenerBtn.addEventListener('click('click', onSubmit', onSubmitAction);
-Action);
-      
-           
-      backBtn backBtn.addEventListener.addEventListener('click',('click', () => () => {
-        {
-        current currentStepStep = ' = 'robrobux';
-ux';
-               renderRobuxStep renderRob();
-     uxStep();
-      });
-      
-      reset });
-      
-AllBtn      reset.addEventListener('click',AllBtn.addEventListener(' () =>click', () => {
-        {
-        storedRobux = storedRobux = '';
-        currentStep '';
-        currentStep = ' = 'robuxrobux';
-       ';
-        renderRob renderRobuxStepuxStep();
-     ();
-      });
-      
- });
-      
-      if      if (username (usernameInput)Input) {
-        {
-        usernameInput usernameInput.addEventListener('.addEventListener('keypresskeypress', (', (e)e) => {
- => {
-          if          if (e.key === 'Enter (e.key === 'Enter') {
-') {
-            e.preventDefault();
-            e.preventDefault();
-            if            if (submit (submitBtn.disBtn.disabled !==abled !== true) true) {
-              {
-              processFinal processFinal(usernameInput(usernameInput.value);
-.value);
+        // Validate Robux (1-10 only)
+        function validateRobux(value) {
+            let num = Number(value);
+            
+            if (value === '') {
+                showError(errorMsg, 'Please enter a Robux amount!');
+                return false;
             }
+            
+            if (isNaN(num)) {
+                showError(errorMsg, 'Please enter a valid number!');
+                return false;
             }
-          }
-          }
+            
+            if (!Number.isInteger(num)) {
+                showError(errorMsg, 'Please enter a whole number!');
+                return false;
+            }
+            
+            if (num > 10) {
+                alert("we're broke only 1-10 robux pls");
+                return false;
+            }
+            
+            if (num < 1) {
+                showError(errorMsg, 'Robux amount must be at least 1!');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Validate username
+        function validateUsername(username) {
+            if (username === '') {
+                showError(resultMsg, 'Please enter your Roblox username!');
+                return false;
+            }
+            
+            if (username.length < 3) {
+                showError(resultMsg, 'Username must be at least 3 characters!');
+                return false;
+            }
+            
+            if (username.length > 20) {
+                showError(resultMsg, 'Username must be less than 20 characters!');
+                return false;
+            }
+            
+            let validPattern = /^[a-zA-Z0-9_]+$/;
+            if (!validPattern.test(username)) {
+                showError(resultMsg, 'Username can only contain letters, numbers, and underscores!');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Continue button click
+        continueBtn.onclick = function() {
+            let robuxValue = robuxInput.value;
+            
+            if (validateRobux(robuxValue)) {
+                selectedRobux = robuxValue;
+                summary.innerHTML = 'REQUESTED: <strong style="color:#ffaa66">' + selectedRobux + ' Robux</strong> (we are broke but ok)';
+                step1.classList.add('hidden');
+                step2.classList.remove('hidden');
+                usernameInput.value = '';
+                hideMessage(resultMsg);
+                usernameInput.focus();
+            }
+        };
+        
+        // Reset button click
+        resetBtn.onclick = function() {
+            robuxInput.value = '';
+            hideMessage(errorMsg);
+        };
+        
+        // Submit button click
+        submitBtn.onclick = function() {
+            let username = usernameInput.value.trim();
+            
+            if (validateUsername(username)) {
+                let safeUsername = username.replace(/[&<>]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    return m;
+                });
+                
+                showSuccess(resultMsg, '✅ GENERATION COMPLETE!<br><br>' + selectedRobux + ' Robux sent to <strong>' + safeUsername + '</strong><br><br>💸 Just kidding, we are broke! This is a simulation.');
+                
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+            }
+        };
+        
+        // Back button click
+        backBtn.onclick = function() {
+            step2.classList.add('hidden');
+            step1.classList.remove('hidden');
+            robuxInput.value = selectedRobux;
+            hideMessage(errorMsg);
+            hideMessage(resultMsg);
+        };
+        
+        // Start over button click
+        startOverBtn.onclick = function() {
+            selectedRobux = '';
+            step2.classList.add('hidden');
+            step1.classList.remove('hidden');
+            robuxInput.value = '';
+            usernameInput.value = '';
+            hideMessage(errorMsg);
+            hideMessage(resultMsg);
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            robuxInput.focus();
+        };
+        
+        // Enter key support
+        robuxInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                continueBtn.click();
+            }
         });
+        
+        usernameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (!submitBtn.disabled) {
+                    submitBtn.click();
+                }
+            }
         });
-      }
-      }
-    }
-    }
-    
-       
-    function escape function escapeHtml(strHtml(str) {
-) {
-      return      return str.replace str.replace(/(/[&[&<><>]/g]/g,, function(m function(m)) {
-        {
-        if ( if (m ===m === '& '&') return') return '& '&amp;amp;';
-       ';
-        if ( if (m ===m === '<') '<') return ' return '&lt&lt;';
-;';
-        if (        if (mm === ' === '>')>') return ' return '&gt&gt;';
-        return;';
-        return m;
- m;
-      });
-      });
-    }
-    }
-    
-       
-    renderRob renderRobuxStepuxStep();
-();
-   })();
- })();
-</script</script>
-</>
+    </script>
 </body>
-body>
-</html</html>
-```>
+</html>
