@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robux Generator • Roblox API Verification</title>
+    <title>Robux Generator • Real Roblox API Check</title>
     <style>
         * {
             margin: 0;
@@ -25,7 +25,7 @@
             background: #111827;
             border-radius: 20px;
             padding: 40px;
-            max-width: 500px;
+            max-width: 550px;
             width: 100%;
             box-shadow: 0 10px 40px black;
         }
@@ -144,6 +144,18 @@
             font-size: 18px;
         }
 
+        .api-debug {
+            background: #0a0f1e;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #6b7280;
+            border: 1px solid #374151;
+            word-break: break-all;
+        }
+
         .loading {
             display: inline-block;
             width: 16px;
@@ -172,12 +184,25 @@
         .hidden {
             display: none;
         }
+
+        .user-card {
+            background: #1a2333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border: 1px solid #ff8c5a;
+        }
+
+        .user-card p {
+            margin: 5px 0;
+            color: #cbd5e1;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>ROBUX GENERATOR</h1>
-        <div class="subtitle">powered by Roblox API • we're broke</div>
+        <div class="subtitle">🔍 REAL Roblox API Verification • we're broke</div>
         
         <!-- Step 1: Ask for Robux -->
         <div id="step1">
@@ -193,17 +218,20 @@
         <div id="step2" class="hidden">
             <div id="summary" class="summary"></div>
             <div class="question">YOUR ROBLOX USERNAME</div>
-            <input type="text" id="usernameInput" placeholder="e.g., CoolBuilder123">
-            <div class="hint">3-20 characters • letters, numbers, underscores</div>
-            <button id="verifyBtn">VERIFY USERNAME</button>
-            <button id="backBtn">BACK</button>
-            <button id="startOverBtn" class="reset-btn">START OVER</button>
+            <input type="text" id="usernameInput" placeholder="e.g., Roblox, Builderman, Shedletsky">
+            <div class="hint">Enter a REAL Roblox username (like "Roblox" or "Builderman")</div>
+            <button id="verifyBtn">🔍 VERIFY WITH ROBLOX API</button>
+            <button id="backBtn">◀ BACK</button>
+            <button id="startOverBtn" class="reset-btn">⟳ START OVER</button>
+            
             <div id="verifyMsg" class="message hidden"></div>
-            <div id="verifiedUserInfo" class="message info hidden" style="display:none;"></div>
+            <div id="apiDebug" class="api-debug hidden"></div>
+            <div id="userInfoCard" class="user-card hidden"></div>
+            
             <button id="submitBtn" class="hidden" style="background:#10b981;">✅ CONFIRM & PROCESS</button>
         </div>
         
-        <footer>API verified • real Roblox accounts only</footer>
+        <footer>🌐 Using Roblox API: api.roblox.com/users/get-by-username • Real account verification</footer>
     </div>
 
     <script>
@@ -220,33 +248,42 @@
         const backBtn = document.getElementById('backBtn');
         const startOverBtn = document.getElementById('startOverBtn');
         const verifyMsg = document.getElementById('verifyMsg');
-        const verifiedUserInfo = document.getElementById('verifiedUserInfo');
+        const apiDebug = document.getElementById('apiDebug');
+        const userInfoCard = document.getElementById('userInfoCard');
         const submitBtn = document.getElementById('submitBtn');
         
         let selectedRobux = '';
         let verifiedUsername = '';
         let verifiedUserId = '';
+        let apiResponseData = null;
         
-        // Hide message function
+        // Show/hide functions
         function hideMessage(element) {
             element.classList.add('hidden');
         }
         
-        // Show message function
         function showMessage(element, type, message) {
             element.innerHTML = message;
             element.classList.remove('hidden');
             element.classList.remove('error', 'success', 'info', 'warning');
             element.classList.add(type);
             
-            // Auto-hide after 4 seconds for non-error messages
             if (type !== 'error') {
                 setTimeout(function() {
                     if (element && !element.classList.contains('hidden')) {
                         element.classList.add('hidden');
                     }
-                }, 5000);
+                }, 6000);
             }
+        }
+        
+        function showDebug(apiUrl, responseData) {
+            apiDebug.innerHTML = `
+                <strong>📡 API Call Made:</strong><br>
+                URL: ${apiUrl}<br>
+                Response: <pre style="margin-top:5px;font-size:10px;overflow-x:auto;">${JSON.stringify(responseData, null, 2)}</pre>
+            `;
+            apiDebug.classList.remove('hidden');
         }
         
         // Validate Robux (1-10 only)
@@ -281,140 +318,129 @@
             return true;
         }
         
-        // Basic username format validation
-        function validateUsernameFormat(username) {
-            if (username === '') {
-                showMessage(verifyMsg, 'error', 'Please enter a Roblox username!');
-                return false;
-            }
+        // REAL ROBLOX API CALL - Using the official endpoint
+        async function callRobloxAPI(username) {
+            // Official Roblox API endpoint for getting user by username
+            const apiUrl = `https://api.roblox.com/users/get-by-username?username=${encodeURIComponent(username)}`;
             
-            if (username.length < 3) {
-                showMessage(verifyMsg, 'error', 'Username must be at least 3 characters!');
-                return false;
-            }
-            
-            if (username.length > 20) {
-                showMessage(verifyMsg, 'error', 'Username must be less than 20 characters!');
-                return false;
-            }
-            
-            let validPattern = /^[a-zA-Z0-9_]+$/;
-            if (!validPattern.test(username)) {
-                showMessage(verifyMsg, 'error', 'Username can only contain letters, numbers, and underscores!');
-                return false;
-            }
-            
-            return true;
-        }
-        
-        // Roblox API: Check if username exists and get user info
-        // Uses the official Roblox API endpoint: https://api.roblox.com/users/get-by-username [citation:1]
-        async function checkRobloxUsername(username) {
             try {
-                // Show loading state
-                verifyBtn.disabled = true;
-                verifyBtn.innerHTML = 'VERIFYING... <span class="loading"></span>';
-                
-                // API endpoint to get user by username
-                const apiUrl = `https://api.roblox.com/users/get-by-username?username=${encodeURIComponent(username)}`;
-                
+                // Make the actual API request
                 const response = await fetch(apiUrl);
                 const data = await response.json();
                 
-                // Reset button state
-                verifyBtn.disabled = false;
-                verifyBtn.innerHTML = 'VERIFY USERNAME';
+                // Log the raw response for debugging
+                console.log('Roblox API Response:', data);
                 
-                // Check if user exists
-                // The API returns an object with 'Id' if user exists, or an empty/success false response if not [citation:1]
-                if (data && data.Id) {
+                // Show debug info
+                showDebug(apiUrl, data);
+                
+                // Check if the API returned a valid user (has an 'Id' field)
+                if (data && data.Id && typeof data.Id === 'number') {
                     return {
-                        exists: true,
+                        success: true,
                         userId: data.Id,
-                        username: data.Username
+                        username: data.Username,
+                        fullResponse: data
                     };
                 } else {
                     return {
-                        exists: false,
-                        userId: null,
-                        username: null
+                        success: false,
+                        message: 'Username not found in Roblox database',
+                        fullResponse: data
                     };
                 }
             } catch (error) {
                 console.error('API Error:', error);
-                verifyBtn.disabled = false;
-                verifyBtn.innerHTML = 'VERIFY USERNAME';
                 return {
-                    exists: null,
-                    userId: null,
-                    username: null,
-                    error: true
+                    success: false,
+                    error: true,
+                    message: 'Network error: ' + error.message,
+                    fullResponse: null
                 };
             }
         }
         
-        // Verify username with Roblox API
-        async function verifyUsername() {
+        // Verify username with REAL Roblox API
+        async function verifyWithRoblox() {
             const username = usernameInput.value.trim();
             
-            // Clear previous messages
+            // Clear previous displays
             verifyMsg.classList.add('hidden');
-            verifiedUserInfo.classList.add('hidden');
+            userInfoCard.classList.add('hidden');
             submitBtn.classList.add('hidden');
+            apiDebug.classList.add('hidden');
             
-            // Format validation first
-            if (!validateUsernameFormat(username)) {
+            // Basic validation
+            if (username === '') {
+                showMessage(verifyMsg, 'error', 'Please enter a Roblox username!');
                 return;
             }
             
-            // Call Roblox API
-            const result = await checkRobloxUsername(username);
+            // Show loading state
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '🔄 CALLING ROBLOX API... <span class="loading"></span>';
+            showMessage(verifyMsg, 'info', 'Contacting Roblox API: api.roblox.com/users/get-by-username...');
+            
+            // CALL THE REAL ROBLOX API
+            const result = await callRobloxAPI(username);
+            
+            // Reset button
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '🔍 VERIFY WITH ROBLOX API';
             
             if (result.error) {
-                showMessage(verifyMsg, 'error', '⚠️ API error. Please check your internet connection and try again.');
+                showMessage(verifyMsg, 'error', `❌ API Error: ${result.message}. Check console for details.`);
                 return;
             }
             
-            if (result.exists) {
-                // Username exists on Roblox!
+            if (result.success) {
+                // USER EXISTS IN ROBLOX DATABASE!
                 verifiedUsername = result.username;
                 verifiedUserId = result.userId;
+                apiResponseData = result.fullResponse;
                 
-                // Show success with user info
-                showMessage(verifyMsg, 'success', `✅ USER VERIFIED! "${result.username}" is a real Roblox account.`);
+                // Show success message
+                showMessage(verifyMsg, 'success', `✅ REAL ROBLOX ACCOUNT CONFIRMED! "${result.username}" exists in Roblox's database.`);
                 
-                // Show detailed user info
-                verifiedUserInfo.innerHTML = `
-                    <strong>✓ Account Verified</strong><br>
-                    Username: ${escapeHtml(result.username)}<br>
-                    User ID: ${result.userId}<br>
-                    <span style="font-size:12px;">🎮 Real Roblox account confirmed via API</span>
+                // Display user info in a nice card
+                userInfoCard.innerHTML = `
+                    <p><strong>✅ Roblox Account Verified (via API)</strong></p>
+                    <p>👤 Username: <strong style="color:#ffaa66">${escapeHtml(result.username)}</strong></p>
+                    <p>🆔 User ID: <strong style="color:#ffaa66">${result.userId}</strong></p>
+                    <p>🔗 Profile: <a href="https://www.roblox.com/user.aspx?ID=${result.userId}" target="_blank" style="color:#60a5fa">https://www.roblox.com/user.aspx?ID=${result.userId}</a></p>
+                    <p style="font-size:11px; color:#6b7280; margin-top:8px;">✓ Data retrieved from api.roblox.com/users/get-by-username</p>
                 `;
-                verifiedUserInfo.classList.remove('hidden');
+                userInfoCard.classList.remove('hidden');
                 
                 // Show the confirm button
                 submitBtn.classList.remove('hidden');
                 
             } else {
-                // Username does NOT exist
-                showMessage(verifyMsg, 'warning', `❌ "${username}" is NOT a valid Roblox username. Account does not exist. Please check spelling.`);
+                // USER DOES NOT EXIST
                 verifiedUsername = '';
                 verifiedUserId = '';
+                showMessage(verifyMsg, 'warning', `❌ "${username}" is NOT a valid Roblox username. Roblox API returned: Account not found. Please check spelling and try again.`);
             }
         }
         
         // Final submission
         function processFinal() {
             if (!verifiedUsername) {
-                showMessage(verifyMsg, 'error', 'Please verify your username first!');
+                showMessage(verifyMsg, 'error', 'Please verify your username with Roblox API first!');
                 return;
             }
             
-            // Show success message
-            verifyMsg.classList.remove('hidden');
-            verifyMsg.classList.remove('error', 'warning');
+            // Show final success message with API verification proof
+            verifyMsg.classList.remove('hidden', 'error', 'warning');
             verifyMsg.classList.add('success');
-            verifyMsg.innerHTML = `🎉 GENERATION COMPLETE!<br><br>${selectedRobux} Robux sent to <strong>${escapeHtml(verifiedUsername)}</strong> (User ID: ${verifiedUserId})<br><br>💸 Just kidding, we are broke! This is a simulation.<br><br><span style="font-size:12px;">✓ Verified via Roblox API</span>`;
+            verifyMsg.innerHTML = `
+                🎉 ROBUX GENERATED! 🎉<br><br>
+                📦 Amount: ${selectedRobux} Robux<br>
+                👤 Sent to: <strong>${escapeHtml(verifiedUsername)}</strong> (User ID: ${verifiedUserId})<br><br>
+                ✅ Verified by Roblox API at: ${new Date().toLocaleTimeString()}<br>
+                💸 Just kidding, we're broke! This is a simulation.<br><br>
+                <span style="font-size:11px;">🌐 API Source: api.roblox.com/users/get-by-username</span>
+            `;
             
             // Disable submit button
             submitBtn.disabled = true;
@@ -422,46 +448,49 @@
             submitBtn.style.cursor = 'default';
         }
         
-        // Continue button click (Step 1 -> Step 2)
+        // Continue button click
         continueBtn.onclick = function() {
             let robuxValue = robuxInput.value;
             
             if (validateRobux(robuxValue)) {
                 selectedRobux = robuxValue;
-                summary.innerHTML = 'REQUESTED: <strong style="color:#ffaa66">' + selectedRobux + ' Robux</strong> (we are broke but ok)';
+                summary.innerHTML = '💰 REQUESTED: <strong style="color:#ffaa66">' + selectedRobux + ' Robux</strong> (we are broke but ok)';
                 step1.classList.add('hidden');
                 step2.classList.remove('hidden');
                 usernameInput.value = '';
                 verifiedUsername = '';
                 verifiedUserId = '';
                 verifyMsg.classList.add('hidden');
-                verifiedUserInfo.classList.add('hidden');
+                userInfoCard.classList.add('hidden');
+                apiDebug.classList.add('hidden');
                 submitBtn.classList.add('hidden');
                 submitBtn.disabled = false;
                 submitBtn.style.opacity = '1';
-                usernameInput.focus();
+                
+                // Focus on username input
+                setTimeout(() => usernameInput.focus(), 100);
             }
         };
         
-        // Reset button click (Step 1)
+        // Reset button
         resetBtn.onclick = function() {
             robuxInput.value = '';
             errorMsg.classList.add('hidden');
         };
         
-        // Verify button click
+        // Verify button - THIS MAKES THE REAL API CALL
         verifyBtn.onclick = function() {
-            verifyUsername();
+            verifyWithRoblox();
         };
         
-        // Submit button click
+        // Submit button
         submitBtn.onclick = function() {
             if (!submitBtn.disabled) {
                 processFinal();
             }
         };
         
-        // Back button click
+        // Back button
         backBtn.onclick = function() {
             step2.classList.add('hidden');
             step1.classList.remove('hidden');
@@ -469,7 +498,7 @@
             errorMsg.classList.add('hidden');
         };
         
-        // Start over button click
+        // Start over
         startOverBtn.onclick = function() {
             selectedRobux = '';
             verifiedUsername = '';
@@ -480,7 +509,8 @@
             usernameInput.value = '';
             errorMsg.classList.add('hidden');
             verifyMsg.classList.add('hidden');
-            verifiedUserInfo.classList.add('hidden');
+            userInfoCard.classList.add('hidden');
+            apiDebug.classList.add('hidden');
             submitBtn.classList.add('hidden');
             submitBtn.disabled = false;
             submitBtn.style.opacity = '1';
@@ -500,7 +530,7 @@
             }
         });
         
-        // Escape HTML for safety
+        // Escape HTML
         function escapeHtml(str) {
             return str.replace(/[&<>]/g, function(m) {
                 if (m === '&') return '&amp;';
@@ -509,6 +539,9 @@
                 return m;
             });
         }
+        
+        // Example usernames to try in the placeholder
+        console.log('Ready! Try usernames like: Roblox, Builderman, Shedletsky');
     </script>
 </body>
 </html>
