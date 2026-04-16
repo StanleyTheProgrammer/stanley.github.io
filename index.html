@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robux Generator</title>
+    <title>Robux Generator • Roblox API Verification</title>
     <style>
         * {
             margin: 0;
@@ -90,6 +90,11 @@
             background: #a85c34;
         }
 
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .reset-btn {
             background: #374151;
         }
@@ -123,6 +128,12 @@
             border-left: 3px solid #ff884d;
         }
 
+        .warning {
+            background: rgba(255, 170, 0, 0.1);
+            color: #ffcc66;
+            border-left: 3px solid #ffaa00;
+        }
+
         .summary {
             background: rgba(255, 100, 50, 0.1);
             padding: 15px;
@@ -131,6 +142,22 @@
             text-align: center;
             color: #ffaa66;
             font-size: 18px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         footer {
@@ -150,7 +177,7 @@
 <body>
     <div class="container">
         <h1>ROBUX GENERATOR</h1>
-        <div class="subtitle">extremely limited funds • we're broke</div>
+        <div class="subtitle">powered by Roblox API • we're broke</div>
         
         <!-- Step 1: Ask for Robux -->
         <div id="step1">
@@ -162,19 +189,21 @@
             <div id="errorMsg" class="message error hidden"></div>
         </div>
         
-        <!-- Step 2: Ask for Username -->
+        <!-- Step 2: Ask for Username with API Verification -->
         <div id="step2" class="hidden">
             <div id="summary" class="summary"></div>
             <div class="question">YOUR ROBLOX USERNAME</div>
             <input type="text" id="usernameInput" placeholder="e.g., CoolBuilder123">
             <div class="hint">3-20 characters • letters, numbers, underscores</div>
-            <button id="submitBtn">CONFIRM & PROCESS</button>
+            <button id="verifyBtn">VERIFY USERNAME</button>
             <button id="backBtn">BACK</button>
             <button id="startOverBtn" class="reset-btn">START OVER</button>
-            <div id="resultMsg" class="message hidden"></div>
+            <div id="verifyMsg" class="message hidden"></div>
+            <div id="verifiedUserInfo" class="message info hidden" style="display:none;"></div>
+            <button id="submitBtn" class="hidden" style="background:#10b981;">✅ CONFIRM & PROCESS</button>
         </div>
         
-        <footer>balance: 10 robux total • don't be greedy</footer>
+        <footer>API verified • real Roblox accounts only</footer>
     </div>
 
     <script>
@@ -187,36 +216,37 @@
         const errorMsg = document.getElementById('errorMsg');
         const summary = document.getElementById('summary');
         const usernameInput = document.getElementById('usernameInput');
-        const submitBtn = document.getElementById('submitBtn');
+        const verifyBtn = document.getElementById('verifyBtn');
         const backBtn = document.getElementById('backBtn');
         const startOverBtn = document.getElementById('startOverBtn');
-        const resultMsg = document.getElementById('resultMsg');
+        const verifyMsg = document.getElementById('verifyMsg');
+        const verifiedUserInfo = document.getElementById('verifiedUserInfo');
+        const submitBtn = document.getElementById('submitBtn');
         
         let selectedRobux = '';
+        let verifiedUsername = '';
+        let verifiedUserId = '';
         
         // Hide message function
         function hideMessage(element) {
             element.classList.add('hidden');
         }
         
-        // Show error function
-        function showError(element, message) {
+        // Show message function
+        function showMessage(element, type, message) {
             element.innerHTML = message;
             element.classList.remove('hidden');
-            setTimeout(function() {
-                element.classList.add('hidden');
-            }, 3000);
-        }
-        
-        // Show success function
-        function showSuccess(element, message) {
-            element.innerHTML = message;
-            element.classList.remove('hidden');
-            element.classList.add('success');
-            setTimeout(function() {
-                element.classList.add('hidden');
-                element.classList.remove('success');
-            }, 5000);
+            element.classList.remove('error', 'success', 'info', 'warning');
+            element.classList.add(type);
+            
+            // Auto-hide after 4 seconds for non-error messages
+            if (type !== 'error') {
+                setTimeout(function() {
+                    if (element && !element.classList.contains('hidden')) {
+                        element.classList.add('hidden');
+                    }
+                }, 5000);
+            }
         }
         
         // Validate Robux (1-10 only)
@@ -224,17 +254,17 @@
             let num = Number(value);
             
             if (value === '') {
-                showError(errorMsg, 'Please enter a Robux amount!');
+                showMessage(errorMsg, 'error', 'Please enter a Robux amount!');
                 return false;
             }
             
             if (isNaN(num)) {
-                showError(errorMsg, 'Please enter a valid number!');
+                showMessage(errorMsg, 'error', 'Please enter a valid number!');
                 return false;
             }
             
             if (!Number.isInteger(num)) {
-                showError(errorMsg, 'Please enter a whole number!');
+                showMessage(errorMsg, 'error', 'Please enter a whole number!');
                 return false;
             }
             
@@ -244,40 +274,155 @@
             }
             
             if (num < 1) {
-                showError(errorMsg, 'Robux amount must be at least 1!');
+                showMessage(errorMsg, 'error', 'Robux amount must be at least 1!');
                 return false;
             }
             
             return true;
         }
         
-        // Validate username
-        function validateUsername(username) {
+        // Basic username format validation
+        function validateUsernameFormat(username) {
             if (username === '') {
-                showError(resultMsg, 'Please enter your Roblox username!');
+                showMessage(verifyMsg, 'error', 'Please enter a Roblox username!');
                 return false;
             }
             
             if (username.length < 3) {
-                showError(resultMsg, 'Username must be at least 3 characters!');
+                showMessage(verifyMsg, 'error', 'Username must be at least 3 characters!');
                 return false;
             }
             
             if (username.length > 20) {
-                showError(resultMsg, 'Username must be less than 20 characters!');
+                showMessage(verifyMsg, 'error', 'Username must be less than 20 characters!');
                 return false;
             }
             
             let validPattern = /^[a-zA-Z0-9_]+$/;
             if (!validPattern.test(username)) {
-                showError(resultMsg, 'Username can only contain letters, numbers, and underscores!');
+                showMessage(verifyMsg, 'error', 'Username can only contain letters, numbers, and underscores!');
                 return false;
             }
             
             return true;
         }
         
-        // Continue button click
+        // Roblox API: Check if username exists and get user info
+        // Uses the official Roblox API endpoint: https://api.roblox.com/users/get-by-username [citation:1]
+        async function checkRobloxUsername(username) {
+            try {
+                // Show loading state
+                verifyBtn.disabled = true;
+                verifyBtn.innerHTML = 'VERIFYING... <span class="loading"></span>';
+                
+                // API endpoint to get user by username
+                const apiUrl = `https://api.roblox.com/users/get-by-username?username=${encodeURIComponent(username)}`;
+                
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                // Reset button state
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = 'VERIFY USERNAME';
+                
+                // Check if user exists
+                // The API returns an object with 'Id' if user exists, or an empty/success false response if not [citation:1]
+                if (data && data.Id) {
+                    return {
+                        exists: true,
+                        userId: data.Id,
+                        username: data.Username
+                    };
+                } else {
+                    return {
+                        exists: false,
+                        userId: null,
+                        username: null
+                    };
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = 'VERIFY USERNAME';
+                return {
+                    exists: null,
+                    userId: null,
+                    username: null,
+                    error: true
+                };
+            }
+        }
+        
+        // Verify username with Roblox API
+        async function verifyUsername() {
+            const username = usernameInput.value.trim();
+            
+            // Clear previous messages
+            verifyMsg.classList.add('hidden');
+            verifiedUserInfo.classList.add('hidden');
+            submitBtn.classList.add('hidden');
+            
+            // Format validation first
+            if (!validateUsernameFormat(username)) {
+                return;
+            }
+            
+            // Call Roblox API
+            const result = await checkRobloxUsername(username);
+            
+            if (result.error) {
+                showMessage(verifyMsg, 'error', '⚠️ API error. Please check your internet connection and try again.');
+                return;
+            }
+            
+            if (result.exists) {
+                // Username exists on Roblox!
+                verifiedUsername = result.username;
+                verifiedUserId = result.userId;
+                
+                // Show success with user info
+                showMessage(verifyMsg, 'success', `✅ USER VERIFIED! "${result.username}" is a real Roblox account.`);
+                
+                // Show detailed user info
+                verifiedUserInfo.innerHTML = `
+                    <strong>✓ Account Verified</strong><br>
+                    Username: ${escapeHtml(result.username)}<br>
+                    User ID: ${result.userId}<br>
+                    <span style="font-size:12px;">🎮 Real Roblox account confirmed via API</span>
+                `;
+                verifiedUserInfo.classList.remove('hidden');
+                
+                // Show the confirm button
+                submitBtn.classList.remove('hidden');
+                
+            } else {
+                // Username does NOT exist
+                showMessage(verifyMsg, 'warning', `❌ "${username}" is NOT a valid Roblox username. Account does not exist. Please check spelling.`);
+                verifiedUsername = '';
+                verifiedUserId = '';
+            }
+        }
+        
+        // Final submission
+        function processFinal() {
+            if (!verifiedUsername) {
+                showMessage(verifyMsg, 'error', 'Please verify your username first!');
+                return;
+            }
+            
+            // Show success message
+            verifyMsg.classList.remove('hidden');
+            verifyMsg.classList.remove('error', 'warning');
+            verifyMsg.classList.add('success');
+            verifyMsg.innerHTML = `🎉 GENERATION COMPLETE!<br><br>${selectedRobux} Robux sent to <strong>${escapeHtml(verifiedUsername)}</strong> (User ID: ${verifiedUserId})<br><br>💸 Just kidding, we are broke! This is a simulation.<br><br><span style="font-size:12px;">✓ Verified via Roblox API</span>`;
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'default';
+        }
+        
+        // Continue button click (Step 1 -> Step 2)
         continueBtn.onclick = function() {
             let robuxValue = robuxInput.value;
             
@@ -287,33 +432,32 @@
                 step1.classList.add('hidden');
                 step2.classList.remove('hidden');
                 usernameInput.value = '';
-                hideMessage(resultMsg);
+                verifiedUsername = '';
+                verifiedUserId = '';
+                verifyMsg.classList.add('hidden');
+                verifiedUserInfo.classList.add('hidden');
+                submitBtn.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
                 usernameInput.focus();
             }
         };
         
-        // Reset button click
+        // Reset button click (Step 1)
         resetBtn.onclick = function() {
             robuxInput.value = '';
-            hideMessage(errorMsg);
+            errorMsg.classList.add('hidden');
+        };
+        
+        // Verify button click
+        verifyBtn.onclick = function() {
+            verifyUsername();
         };
         
         // Submit button click
         submitBtn.onclick = function() {
-            let username = usernameInput.value.trim();
-            
-            if (validateUsername(username)) {
-                let safeUsername = username.replace(/[&<>]/g, function(m) {
-                    if (m === '&') return '&amp;';
-                    if (m === '<') return '&lt;';
-                    if (m === '>') return '&gt;';
-                    return m;
-                });
-                
-                showSuccess(resultMsg, '✅ GENERATION COMPLETE!<br><br>' + selectedRobux + ' Robux sent to <strong>' + safeUsername + '</strong><br><br>💸 Just kidding, we are broke! This is a simulation.');
-                
-                submitBtn.disabled = true;
-                submitBtn.style.opacity = '0.6';
+            if (!submitBtn.disabled) {
+                processFinal();
             }
         };
         
@@ -322,19 +466,22 @@
             step2.classList.add('hidden');
             step1.classList.remove('hidden');
             robuxInput.value = selectedRobux;
-            hideMessage(errorMsg);
-            hideMessage(resultMsg);
+            errorMsg.classList.add('hidden');
         };
         
         // Start over button click
         startOverBtn.onclick = function() {
             selectedRobux = '';
+            verifiedUsername = '';
+            verifiedUserId = '';
             step2.classList.add('hidden');
             step1.classList.remove('hidden');
             robuxInput.value = '';
             usernameInput.value = '';
-            hideMessage(errorMsg);
-            hideMessage(resultMsg);
+            errorMsg.classList.add('hidden');
+            verifyMsg.classList.add('hidden');
+            verifiedUserInfo.classList.add('hidden');
+            submitBtn.classList.add('hidden');
             submitBtn.disabled = false;
             submitBtn.style.opacity = '1';
             robuxInput.focus();
@@ -349,11 +496,19 @@
         
         usernameInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                if (!submitBtn.disabled) {
-                    submitBtn.click();
-                }
+                verifyBtn.click();
             }
         });
+        
+        // Escape HTML for safety
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
     </script>
 </body>
 </html>
